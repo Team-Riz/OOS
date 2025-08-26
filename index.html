@@ -1,104 +1,141 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Garage Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- SheetJS for XLSX/CSV parsing -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
-  <!-- Chart.js for small summary charts (optional but handy) -->
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OOS Vehicle Dashboard</title>
+
+  <!-- Font Awesome (icons) -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- SheetJS for reading xlsx/csv -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1>Vehicle Garage Dashboard</h1>
-    <div class="right">
-      <span id="badge-total" class="badge">Total: 0</span>
-      <span id="badge-ready" class="badge success">Ready: 0</span>
-      <span id="badge-progress" class="badge warn">In Progress: 0</span>
+  <header class="topbar">
+    <div class="brand">
+      <i class="fa-solid fa-car-burst"></i>
+      <h1>OOS Vehicle Dashboard</h1>
+    </div>
+    <div class="top-actions">
+      <div class="badges">
+        <span id="totalBadge" class="badge">Total: 0</span>
+        <span id="readyBadge" class="badge ready">Ready: 0</span>
+        <span id="overdueBadge" class="badge warn">Overdue: 0</span>
+      </div>
+      <div class="upload-row">
+        <label class="btn-file">
+          OOS File
+          <input id="oosFile" type="file" accept=".csv,.xlsx,.xls" />
+        </label>
+        <label class="btn-file">
+          Location File
+          <input id="locFile" type="file" accept=".csv,.xlsx,.xls" />
+        </label>
+      </div>
     </div>
   </header>
 
-  <!-- Uploads -->
-  <section class="card">
-    <h2>Import Data</h2>
-    <div class="uploader">
-      <div class="upload-block">
-        <label class="label">OOS File (xlsx/csv)</label>
-        <input id="oosFile" type="file" accept=".xlsx,.xls,.csv" />
-        <div class="hint">After loading, choose which OOS column matches the Location file’s <strong>Grouping</strong>.</div>
-        <div id="joinPicker" class="join-picker hidden">
-          <label for="joinKeySel">Join on OOS column:</label>
-          <select id="joinKeySel"></select>
+  <main class="container">
+    <!-- Join selector will appear after OOS load -->
+    <div id="joinWrapper" class="join-row hidden">
+      <label>Join Location <strong>Grouping</strong> to OOS column:</label>
+      <select id="joinSelect"></select>
+    </div>
+
+    <!-- Garage tabs -->
+    <nav id="garageTabs" class="tabs">
+      <button class="tab active" data-garage="__ALL__">All Garages</button>
+    </nav>
+
+    <!-- Filters -->
+    <section class="controls">
+      <input id="searchInput" placeholder="Search (license / make / model / location / remarks)" />
+      <select id="oosFilter"><option value="">All OOS Reasons</option></select>
+      <select id="statusFilter"><option value="">All Status</option><option>Ready</option><option>In Progress</option></select>
+      <button id="clearBtn" class="btn">Clear</button>
+    </section>
+
+    <!-- Top charts -->
+    <section class="charts-grid">
+      <div class="card">
+        <h3>Vehicles by Garage</h3>
+        <canvas id="garageChart"></canvas>
+      </div>
+      <div class="card">
+        <h3>OOS Reasons</h3>
+        <canvas id="oosChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Vehicles table -->
+    <section class="card table-card">
+      <h2>Vehicles</h2>
+      <div class="table-wrap">
+        <table id="vehiclesTable">
+          <thead>
+            <tr>
+              <th>License No.</th>
+              <th>Make &amp; Model</th>
+              <th>OOS Reason</th>
+              <th>Garage Name</th>
+              <th>Days in Garage</th>
+              <th>Location</th>
+              <th>Remarks</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="vehiclesTbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal - Edit -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h3 id="modalTitle">Edit Vehicle</h3>
+      <form id="editForm">
+        <div class="field">
+          <label>Garage Name</label>
+          <input id="editGarage" />
         </div>
+        <div class="field">
+          <label>Location</label>
+          <input id="editLocation" />
+        </div>
+        <div class="field">
+          <label>Remarks</label>
+          <input id="editRemarks" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="saveEditBtn" class="btn primary">Save</button>
+          <button type="button" id="cancelEditBtn" class="btn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal - History -->
+  <div id="histModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card wide">
+      <h3>History</h3>
+      <div id="historyList" class="history-list"></div>
+      <div class="modal-actions">
+        <button id="closeHistBtn" class="btn">Close</button>
       </div>
+    </div>
+  </div>
 
-      <div class="upload-block">
-        <label class="label">Location File (xlsx/csv)</label>
-        <input id="locFile" type="file" accept=".xlsx,.xls,.csv" />
-        <div class="hint">Expected columns: <code>Grouping</code>, <code>Location</code>. (Case/spacing ignored.)</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Filters -->
-  <section class="card">
-    <h2>Filters</h2>
-    <div class="filters">
-      <select id="fGarage"><option value="">All Garages</option></select>
-      <select id="fOOS"><option value="">All OOS Reasons</option></select>
-      <select id="fStatus"><option value="">All Status</option><option>Ready</option><option>In Progress</option></select>
-      <input id="fSearch" type="text" placeholder="Search make / model / remarks / location…" />
-      <button id="btnClear">Clear</button>
-    </div>
-  </section>
-
-  <!-- Summary -->
-  <section class="grid">
-    <div class="card">
-      <h3>Garage Distribution</h3>
-      <canvas id="garageChart" height="200"></canvas>
-    </div>
-    <div class="card">
-      <h3>Ready by Garage</h3>
-      <canvas id="readyChart" height="200"></canvas>
-    </div>
-    <div class="card">
-      <h3>OOS Reasons</h3>
-      <canvas id="oosChart" height="200"></canvas>
-    </div>
-  </section>
-
-  <!-- Table -->
-  <section class="card">
-    <h2>Vehicles</h2>
-    <div class="table-wrap">
-      <table id="vehTable">
-        <thead>
-          <tr>
-            <th>Agreement</th>
-            <th>Unit</th>
-            <th>License</th>
-            <th>Make</th>
-            <th>Model</th>
-            <th>OOS Reason</th>
-            <th>Garage (Mapped)</th>
-            <th>Days in Garage</th>
-            <th>Remarks</th>
-            <th>Status</th>
-            <th>Location</th>
-          </tr>
-        </thead>
-        <tbody id="vehTbody"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <footer>
-    <small>Upload OOS + Location files to refresh. All data stays in your browser.</small>
+  <footer class="footer">
+    <small>All processing is local to your browser. Use the import buttons to load / update data.</small>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
