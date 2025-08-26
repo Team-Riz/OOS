@@ -1,140 +1,72 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OOS Vehicle Dashboard</title>
-
-  <!-- Font Awesome (icons) -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-  <!-- SheetJS for reading xlsx/csv -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
-
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <i class="fa-solid fa-car-burst"></i>
-      <h1>OOS Vehicle Dashboard</h1>
-    </div>
-    <div class="top-actions">
-      <div class="badges">
-        <span id="totalBadge" class="badge">Total: 0</span>
-        <span id="readyBadge" class="badge ready">Ready: 0</span>
-        <span id="overdueBadge" class="badge warn">Overdue: 0</span>
-      </div>
-      <div class="upload-row">
-        <label class="btn-file">
-          OOS File
-          <input id="oosFile" type="file" accept=".csv,.xlsx,.xls" />
-        </label>
-        <label class="btn-file">
-          Location File
-          <input id="locFile" type="file" accept=".csv,.xlsx,.xls" />
-        </label>
-      </div>
+  <header>
+    <h1>OOS Vehicle Dashboard</h1>
+    <div class="upload-section">
+      <label>
+        Upload OOS File:
+        <input type="file" id="oosFile" accept=".csv" />
+      </label>
+      <label>
+        Upload Location File:
+        <input type="file" id="locationFile" accept=".csv" />
+      </label>
     </div>
   </header>
 
-  <main class="container">
-    <!-- Join selector will appear after OOS load -->
-    <div id="joinWrapper" class="join-row hidden">
-      <label>Join Location <strong>Grouping</strong> to OOS column:</label>
-      <select id="joinSelect"></select>
-    </div>
-
-    <!-- Garage tabs -->
-    <nav id="garageTabs" class="tabs">
-      <button class="tab active" data-garage="__ALL__">All Garages</button>
-    </nav>
-
-    <!-- Filters -->
-    <section class="controls">
-      <input id="searchInput" placeholder="Search (license / make / model / location / remarks)" />
-      <select id="oosFilter"><option value="">All OOS Reasons</option></select>
-      <select id="statusFilter"><option value="">All Status</option><option>Ready</option><option>In Progress</option></select>
-      <button id="clearBtn" class="btn">Clear</button>
-    </section>
-
-    <!-- Top charts -->
-    <section class="charts-grid">
-      <div class="card">
-        <h3>Vehicles by Garage</h3>
-        <canvas id="garageChart"></canvas>
-      </div>
-      <div class="card">
-        <h3>OOS Reasons</h3>
-        <canvas id="oosChart"></canvas>
-      </div>
-    </section>
-
-    <!-- Vehicles table -->
-    <section class="card table-card">
-      <h2>Vehicles</h2>
-      <div class="table-wrap">
-        <table id="vehiclesTable">
-          <thead>
-            <tr>
-              <th>License No.</th>
-              <th>Make &amp; Model</th>
-              <th>OOS Reason</th>
-              <th>Garage Name</th>
-              <th>Days in Garage</th>
-              <th>Location</th>
-              <th>Remarks</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="vehiclesTbody"></tbody>
-        </table>
-      </div>
+  <main>
+    <section class="table-section">
+      <h2>Vehicle Data</h2>
+      <table id="vehicleTable">
+        <thead>
+          <tr>
+            <th>Vehicle ID</th>
+            <th>License No.</th>
+            <th>Make & Model</th>
+            <th>OOS Reason</th>
+            <th>Garage Name</th>
+            <th>Days in Garage</th>
+            <th>Location</th>
+            <th>Remarks</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </section>
   </main>
 
-  <!-- Modal - Edit -->
-  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-card">
-      <h3 id="modalTitle">Edit Vehicle</h3>
-      <form id="editForm">
-        <div class="field">
-          <label>Garage Name</label>
-          <input id="editGarage" />
-        </div>
-        <div class="field">
-          <label>Location</label>
-          <input id="editLocation" />
-        </div>
-        <div class="field">
-          <label>Remarks</label>
-          <input id="editRemarks" />
-        </div>
-        <div class="modal-actions">
-          <button type="button" id="saveEditBtn" class="btn primary">Save</button>
-          <button type="button" id="cancelEditBtn" class="btn">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal - History -->
-  <div id="histModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-card wide">
-      <h3>History</h3>
-      <div id="historyList" class="history-list"></div>
+  <!-- Edit Vehicle Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h2>Edit Vehicle</h2>
+      <label>Garage Name: <input type="text" id="editGarage" /></label>
+      <label>Location: <input type="text" id="editLocation" /></label>
+      <label>Remarks: <input type="text" id="editRemarks" /></label>
       <div class="modal-actions">
-        <button id="closeHistBtn" class="btn">Close</button>
+        <button id="saveEdit">Save</button>
+        <button id="cancelEdit">Cancel</button>
       </div>
     </div>
   </div>
 
-  <footer class="footer">
-    <small>All processing is local to your browser. Use the import buttons to load / update data.</small>
-  </footer>
+  <!-- History Modal -->
+  <div id="historyModal" class="modal">
+    <div class="modal-content">
+      <h2>History</h2>
+      <div id="historyList" class="history-list"></div>
+      <div class="modal-actions">
+        <button id="closeHistory">Close</button>
+      </div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
